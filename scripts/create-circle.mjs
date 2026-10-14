@@ -3,6 +3,10 @@
 //
 //   npm run create-circle -- circles/example.json                # local dev DB
 //   npm run create-circle -- circles/my-group.json --remote --base-url https://<your-app>.workers.dev
+//   npm run create-circle -- circles/my-group.json --sql group.sql --base-url https://<your-app>.workers.dev
+//
+// --sql writes the SQL to a file instead of running it, for pasting into the
+// D1 Console in the Cloudflare dashboard (no `wrangler login` needed).
 //
 // Everything about a group - its people, lists and places - is data in this
 // file (and editable in the app afterwards), so starting a new group or
@@ -15,13 +19,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const args = process.argv.slice(2)
-const file = args.find((a) => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--base-url')
+const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined)
+const valueOf = new Set(['--base-url', '--sql'].map((name) => args.indexOf(name) + 1).filter((i) => i > 0))
+const file = args.find((a, i) => !a.startsWith('--') && !valueOf.has(i))
 const remote = args.includes('--remote')
-const baseUrlIndex = args.indexOf('--base-url')
-const baseUrl = (baseUrlIndex >= 0 ? args[baseUrlIndex + 1] : 'http://localhost:8787').replace(/\/$/, '')
+const sqlOut = option('--sql')
+const baseUrl = (option('--base-url') ?? 'http://localhost:8787').replace(/\/$/, '')
 
-if (!file) {
-  console.error('Usage: npm run create-circle -- <group.json> [--remote] [--base-url <url>]')
+if (!file || (args.includes('--sql') && !sqlOut)) {
+  console.error('Usage: npm run create-circle -- <group.json> [--remote | --sql <out.sql>] [--base-url <url>]')
   process.exit(1)
 }
 
@@ -84,6 +90,19 @@ for (const [listName, places] of Object.entries(data.lists ?? {})) {
   }
 }
 
+const share = () => {
+  console.log('Share this link with the group (anyone with it can view and edit):')
+  console.log(`  ${baseUrl}/c/${token}`)
+}
+
+if (sqlOut) {
+  writeFileSync(sqlOut, statements.join('\n') + '\n')
+  console.log(`Wrote ${sqlOut}. Paste it into the D1 Console and run it once (running it again makes a second group).`)
+  console.log('Once it has run:')
+  share()
+  process.exit(0)
+}
+
 const dir = mkdtempSync(join(tmpdir(), 'wsgo-'))
 const sqlFile = join(dir, 'circle.sql')
 writeFileSync(sqlFile, statements.join('\n'))
@@ -99,5 +118,4 @@ try {
 }
 
 console.log(`\nCreated "${groupName}" in the ${remote ? 'production' : 'local'} database.`)
-console.log('Share this link with the group (anyone with it can view and edit):')
-console.log(`  ${baseUrl}/c/${token}`)
+share()

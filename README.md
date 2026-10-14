@@ -41,15 +41,22 @@ share link (`/c/<token>`). Anyone with the link can view and edit everything.
 Removing a person, list or place only hides it, so history is kept and it
 can be restored.
 
-To start a group, describe it in a JSON file (see `circles/example.json`)
-and run:
+To start a group, describe it in a JSON file (see `circles/example.json`),
+then turn it into SQL:
 
 ```bash
-npm run create-circle -- circles/my-group.json --remote --base-url https://<your-app>.workers.dev
+npm run create-circle -- circles/my-group.json --sql group.sql --base-url https://<your-app>.workers.dev
 ```
 
-It prints the link to share. Everything can be edited in the app afterwards.
-Without `--remote` it goes into your local development database instead.
+It writes `group.sql` and prints the group's share link. Paste the SQL into
+the D1 Console (see "Adding a group" below) and run it **once**: running it
+again creates a second, separate group. Everything can be edited in the app
+afterwards.
+
+Other ways to run it:
+- no `--sql`: puts the group in your local development database
+- `--remote` instead of `--sql`: writes straight to the production database
+  (needs `npx wrangler login` first)
 
 ## Project layout
 
@@ -86,33 +93,58 @@ Tests: `npm test` (and `npm run typecheck`).
 
 ## Deploying (free)
 
-First deploy, from your own computer:
+The live app is deployed by Cloudflare straight from this GitHub repo.
+Everything below is done in the Cloudflare dashboard; nothing needs to be
+installed.
+
+### First-time setup
+
+1. Create a free Cloudflare account at https://dash.cloudflare.com/sign-up
+   (signing in with GitHub works).
+2. **Workers & Pages > Create > Import a repository**, pick this repo, and set:
+   - Project name: `where-should-we-go-out` (must match `name` in
+     `wrangler.jsonc`)
+   - Build command: `npm run build`
+   - Deploy command: `npm run deploy`
+   - Non-production branch deploy command: leave the default,
+     `npx wrangler versions upload`
+3. Deploy. The first deploy creates the D1 database and its tables.
+4. Turn on the public address: on the Worker's page, **Settings > Domains &
+   Routes > workers.dev > Enable**. If asked, pick a `workers.dev`
+   subdomain for the account. The app is then at
+   `https://where-should-we-go-out.<subdomain>.workers.dev`.
+5. Check it:
+   - `/health` should show `{"status":"ok"}`
+   - `/api/c/test` should show `"Group not found - check the link"`. If it
+     shows "Something went wrong" instead, the tables are missing: run the
+     contents of `migrations/0001_init.sql` in the D1 Console.
+
+### Adding a group
+
+1. Make the SQL with `create-circle --sql` (see "Groups are data, not code"
+   above).
+2. In the dashboard, open **Storage & Databases > D1 > where-should-we-go-out
+   > Console**, paste the SQL and click **Execute**. Do this once only.
+3. Open the printed link and share it with the group.
+
+### After setup
+
+- **Every push to `main` deploys automatically.** `npm run deploy` publishes
+  the Worker, then applies any new files in `migrations/`. Data is kept
+  across deploys.
+- **Other branches** (such as PR branches) are uploaded as preview versions
+  with their own link, without touching the live app. Previews use the
+  **same database** as the live app, so a visit logged on a preview is a real
+  visit. To stop previews, turn off "Builds for non-production branches" in
+  the Worker's build settings.
+
+### Deploying from a computer instead
 
 ```bash
-npx wrangler login       # opens the browser; a free Cloudflare account is enough
-npm run build
-npm run deploy           # deploys, creates the D1 database, applies migrations
+npx wrangler login
+npm ci && npm run build
+npm run deploy
 ```
-
-`npm run deploy` prints the app's URL (`https://where-should-we-go-out.<your-subdomain>.workers.dev`).
-Then create your group in the production database:
-
-```bash
-npm run create-circle -- circles/my-group.json --remote --base-url https://where-should-we-go-out.<your-subdomain>.workers.dev
-```
-
-### Automatic deploys on push (optional)
-
-In the Cloudflare dashboard: **Workers & Pages > where-should-we-go-out >
-Settings > Builds > Connect** to this GitHub repo, with:
-
-- Build command: `npm run build`
-- Deploy command: `npm run deploy`
-
-Every push to `main` then deploys. If the deploy step fails on the D1
-migrations with a permissions error, give the build's API token D1 edit
-access (or change the deploy command to `npx wrangler deploy` and apply
-migrations from your computer with `npx wrangler d1 migrations apply DB --remote`).
 
 ### Free tier limits
 
