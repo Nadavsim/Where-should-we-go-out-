@@ -1,18 +1,7 @@
-# Secrets
-.env
-
-# Python
-venv/
-.venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-
-# Frontend build output - `npm run build` in frontend/ writes it; CI builds
-# it fresh before deploying.
-/static/
-
-# Node
-frontend/node_modules/
-
+node_modules/
+# Frontend build output - `npm run build` writes it; CI and deploys build it fresh.
+frontend/dist/
+# Local D1 database and other wrangler state.
+.wrangler/
+.dev.vars
 .DS_Store

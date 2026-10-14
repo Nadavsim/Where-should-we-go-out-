@@ -1,0 +1,14 @@
+# Applied by Cloudflare to every static file (the API sets its own).
+# The share link's token is the group's only key: never send it in a
+# Referer, never let search engines index the pages.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, nofollow
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+# Vite's hashed bundles never change, so they can be cached forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
