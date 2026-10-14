@@ -106,8 +106,7 @@ installed.
      `wrangler.jsonc`)
    - Build command: `npm run build`
    - Deploy command: `npm run deploy`
-   - Non-production branch deploy command: leave the default,
-     `npx wrangler versions upload`
+   - Builds for non-production branches: off (see "After setup" below)
 3. Deploy. The first deploy creates the D1 database and its tables.
 4. Turn on the public address: on the Worker's page, **Settings > Domains &
    Routes > workers.dev > Enable**. If asked, pick a `workers.dev`
@@ -132,11 +131,13 @@ installed.
 - **Every push to `main` deploys automatically.** `npm run deploy` publishes
   the Worker, then applies any new files in `migrations/`. Data is kept
   across deploys.
-- **Other branches** (such as PR branches) are uploaded as preview versions
-  with their own link, without touching the live app. Previews use the
-  **same database** as the live app, so a visit logged on a preview is a real
-  visit. To stop previews, turn off "Builds for non-production branches" in
-  the Worker's build settings.
+- **Other branches are not built.** "Builds for non-production branches"
+  is off: the preview build failed instantly on the first PR, and previews
+  would have shared the live database anyway. PRs are checked by GitHub
+  Actions CI (typecheck, tests, build) instead. If previews are turned back
+  on, keep the default non-production deploy command
+  (`npx wrangler versions upload`) and remember that a visit logged on a
+  preview is a real visit.
 
 ### Deploying from a computer instead
 
