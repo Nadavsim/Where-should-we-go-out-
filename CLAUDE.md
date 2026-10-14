@@ -15,8 +15,10 @@ static files live in `frontend/public/_headers`.
 
 Deployed by Cloudflare's GitHub integration (Workers Builds): every push to
 `main` runs `npm run build` then `npm run deploy`. Builds for other
-branches are turned off (the preview build failed instantly, cause never
-diagnosed), so PRs are checked only by GitHub Actions CI. Live at
+branches are turned off: their default command, `npx wrangler preview`,
+fails without a `previews` block in `wrangler.jsonc`, and that block would
+need its own D1 database since it doesn't inherit production bindings. PRs
+are checked only by GitHub Actions CI. Live at
 https://where-should-we-go-out.ndvsim.workers.dev. Groups were added by
 pasting `create-circle --sql` output into the D1 Console. Never commit a
 group's JSON or SQL: it holds real names and the group's secret token.
