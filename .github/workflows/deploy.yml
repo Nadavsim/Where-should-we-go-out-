@@ -1,0 +1,49 @@
+# Deploys to an Azure App Service on every push to main - once it's set up.
+# Until the repo variable AZURE_WEBAPP_NAME exists, the job is skipped (not
+# failed). Setup steps are in README.md under "Deploying".
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: vars.AZURE_WEBAPP_NAME != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Test before deploying
+        run: |
+          pip install -r requirements-dev.txt
+          pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      # Azure installs requirements.txt itself (SCM_DO_BUILD_DURING_DEPLOYMENT),
+      # so only source + the built static/ folder are uploaded.
+      - name: Package
+        run: zip -r app.zip backend scripts static requirements.txt -x '*/__pycache__/*'
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+          package: app.zip

@@ -1,0 +1,14 @@
+{
+  "name": "Friday crew",
+  "members": ["Alice", "Bob", "Carol"],
+  "never_days": 365,
+  "lists": {
+    "Ramen": [
+      { "name": "Example ramen place", "link": "https://maps.google.com/?q=ramen+tel+aviv" },
+      "Another ramen place"
+    ],
+    "Hamburger": ["Example burger place", "Another burger place"],
+    "Cocktail bars": ["Example cocktail bar", "Another cocktail bar"],
+    "Our usual pub": ["Our usual pub"]
+  }
+}
