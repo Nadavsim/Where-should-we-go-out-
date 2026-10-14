@@ -106,8 +106,9 @@ installed.
      `wrangler.jsonc`)
    - Build command: `npm run build`
    - Deploy command: `npm run deploy`
-   - Branch control: production branch `main`, non-production branch
-     builds off (see "After setup" below)
+   - Production branch: `main`
+   - On the **Previews Base** tab: turn off "Builds for preview branches"
+     (see "After setup" below)
 3. Deploy. The first deploy creates the D1 database and its tables.
 4. Turn on the public address: on the Worker's page, **Settings > Domains &
    Routes > workers.dev > Enable**. If asked, pick a `workers.dev`
@@ -133,7 +134,9 @@ installed.
   the Worker, then applies any new files in `migrations/`. Data is kept
   across deploys.
 - **Other branches are not built.** Non-production branch builds are
-  turned off (Settings > Build > Branch control). PRs are checked by GitHub
+  turned off (Settings > Build > **Previews Base** tab > "Builds for
+  preview branches"; not "Disable builds" on the Production tab, which
+  would stop deploys of the live app). PRs are checked by GitHub
   Actions CI (typecheck, tests, build) instead.
 
   Why: Cloudflare's default deploy command for other branches is
