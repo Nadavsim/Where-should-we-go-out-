@@ -106,8 +106,9 @@ installed.
      `wrangler.jsonc`)
    - Build command: `npm run build`
    - Deploy command: `npm run deploy`
-   - Non-production branch deploy command: leave the default,
-     `npx wrangler versions upload`
+   - Production branch: `main`
+   - On the **Previews Base** tab: turn off "Builds for preview branches"
+     (see "After setup" below)
 3. Deploy. The first deploy creates the D1 database and its tables.
 4. Turn on the public address: on the Worker's page, **Settings > Domains &
    Routes > workers.dev > Enable**. If asked, pick a `workers.dev`
@@ -132,11 +133,19 @@ installed.
 - **Every push to `main` deploys automatically.** `npm run deploy` publishes
   the Worker, then applies any new files in `migrations/`. Data is kept
   across deploys.
-- **Other branches** (such as PR branches) are uploaded as preview versions
-  with their own link, without touching the live app. Previews use the
-  **same database** as the live app, so a visit logged on a preview is a real
-  visit. To stop previews, turn off "Builds for non-production branches" in
-  the Worker's build settings.
+- **Other branches are not built.** Non-production branch builds are
+  turned off (Settings > Build > **Previews Base** tab > "Builds for
+  preview branches"; not "Disable builds" on the Production tab, which
+  would stop deploys of the live app). PRs are checked by GitHub
+  Actions CI (typecheck, tests, build) instead.
+
+  Why: Cloudflare's default deploy command for other branches is
+  `npx wrangler preview` (a beta command), which refuses to run unless
+  `wrangler.jsonc` has a `previews` block. That block does not inherit the
+  production bindings, so turning previews on properly means giving them
+  their own D1 database (with migrations applied and a test group), not
+  just copying `vars`. Not worth it for a friend-group app; revisit if it
+  becomes useful.
 
 ### Deploying from a computer instead
 
