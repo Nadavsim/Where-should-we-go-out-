@@ -1,0 +1,23 @@
+{
+  "name": "where-should-we-go-out",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "cd frontend && npm ci && npm run build",
+    "dev": "wrangler d1 migrations apply DB --local && wrangler dev",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy && wrangler d1 migrations apply DB --remote",
+    "create-circle": "node scripts/create-circle.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.2",
+    "@cloudflare/workers-types": "^5.20261014.1",
+    "typescript": "~6.0.2",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.151.0"
+  }
+}

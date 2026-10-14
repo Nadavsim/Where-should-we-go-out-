@@ -12,22 +12,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Backend tests
-        run: |
-          pip install -r requirements-dev.txt
-          pytest -q
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Frontend typecheck, lint and build
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck and test the Worker
         run: |
-          cd frontend
-          npm ci
-          npm run lint
+          npm run typecheck
+          npm test
+
+      - name: Lint and build the frontend
+        run: |
           npm run build
+          cd frontend && npm run lint

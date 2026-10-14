@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "where-should-we-go-out",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // The React app (built by `npm run build`) is served as static assets.
+  // Unknown paths such as /c/<token> fall back to index.html; only the API
+  // and the health check run the Worker.
+  "assets": {
+    "directory": "./frontend/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/health"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      // `wrangler deploy` creates this database on the first deploy.
+      "database_name": "where-should-we-go-out",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // "Today" for visit dates and day counts.
+    "APP_TIMEZONE": "Asia/Jerusalem"
+  },
+  "observability": { "enabled": true }
+}

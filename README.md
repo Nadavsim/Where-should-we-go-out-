@@ -4,6 +4,9 @@ A small web app for a friend group: keep shared lists of places you like
 (ramen, burgers, cocktail bars...), log each time you go somewhere, and let
 the app suggest the place your group is most overdue for.
 
+Runs entirely on Cloudflare's free tier: a Worker for the API, D1 (SQLite)
+for the database, and Workers static assets for the React app.
+
 ## How suggestions work
 
 1. Pick **who's coming tonight**.
@@ -28,8 +31,8 @@ A list with a **single place** can't recommend anything, so instead it shows
 when you last went and with whom (among tonight's people). Add a second place
 and it becomes a normal list.
 
-The logic is a pure function in `backend/ranking.py`, tested in
-`tests/test_ranking.py`.
+The logic is a pure function in `src/ranking.ts`, tested in
+`test/ranking.test.ts`.
 
 ## Groups are data, not code
 
@@ -42,66 +45,76 @@ To start a group, describe it in a JSON file (see `circles/example.json`)
 and run:
 
 ```bash
-python -m scripts.create_circle circles/my-group.json --base-url https://your-app-url
+npm run create-circle -- circles/my-group.json --remote --base-url https://<your-app>.workers.dev
 ```
 
 It prints the link to share. Everything can be edited in the app afterwards.
+Without `--remote` it goes into your local development database instead.
 
 ## Project layout
 
 ```
-backend/
-  app.py        FastAPI routes (+ serves the built frontend)
-  db.py         MongoDB access, everything scoped to one circle
-  models.py     request validation
-  ranking.py    the recommendation logic (pure, no I/O)
-frontend/       React + TypeScript (Vite), builds into ../static
-scripts/create_circle.py
+src/
+  index.ts       the API (Hono on a Cloudflare Worker)
+  db.ts          D1 queries, everything scoped to one circle
+  ranking.ts     the recommendation logic (pure, no I/O)
+  validate.ts    request validation
+migrations/      D1 schema
+frontend/        React + TypeScript (Vite), builds into frontend/dist
+scripts/create-circle.mjs
 circles/example.json
-tests/
+test/            runs inside the real Workers runtime against a local D1
+wrangler.jsonc   Cloudflare config
 ```
 
 ## Running locally
 
-Needs Python 3.11+, Node 22, and a MongoDB connection string (a free MongoDB
-Atlas M0 cluster is enough).
+Needs Node 22+. No Cloudflare account needed for local development.
 
 ```bash
-cp .env.example .env            # fill in MONGODB_URI
-python -m venv venv && source venv/bin/activate
-pip install -r requirements-dev.txt
-(cd frontend && npm ci && npm run build)
-python -m scripts.create_circle circles/example.json
-uvicorn backend.app:app --reload
+npm ci
+npm run build                                       # builds the frontend
+npm run create-circle -- circles/example.json       # creates the local DB too
+npm run dev                                         # http://localhost:8787
 ```
 
-Open the printed link. For frontend work, also run `npm run dev` in
-`frontend/` and open http://localhost:5173/c/<token> (it proxies `/api` to
-uvicorn).
+Open the printed link. For frontend work with hot reload, also run
+`npm run dev` inside `frontend/` and open http://localhost:5173/c/<token>
+(it proxies `/api` to the Worker on 8787).
 
-Tests use an in-memory MongoDB (`mongomock-motor`), no database needed:
+Tests: `npm test` (and `npm run typecheck`).
+
+## Deploying (free)
+
+First deploy, from your own computer:
 
 ```bash
-pytest
+npx wrangler login       # opens the browser; a free Cloudflare account is enough
+npm run build
+npm run deploy           # deploys, creates the D1 database, applies migrations
 ```
 
-## Deploying
+`npm run deploy` prints the app's URL (`https://where-should-we-go-out.<your-subdomain>.workers.dev`).
+Then create your group in the production database:
 
-`.github/workflows/deploy.yml` deploys to Azure App Service on every push to
-`main`. It is skipped until it's configured:
+```bash
+npm run create-circle -- circles/my-group.json --remote --base-url https://where-should-we-go-out.<your-subdomain>.workers.dev
+```
 
-1. Create an App Service (Linux, Python 3.11). Azure for Students allows
-   **one Free (F1) plan per region**, so if one is already in use, pick a
-   different region.
-2. Under **Configuration > Application settings** add:
-   - `MONGODB_URI`, `MONGODB_DB_NAME`
-   - `SCM_DO_BUILD_DURING_DEPLOYMENT` = `true` (otherwise Azure never runs
-     `pip install`, and the app fails with `No module named uvicorn`)
-3. Under **Configuration > General settings**, set the startup command:
-   `python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000`
-4. Optionally, set the **Health check** path to `/health`.
-5. In the GitHub repo settings, add a variable `AZURE_WEBAPP_NAME` (the App
-   Service name) and a secret `AZURE_PUBLISH_PROFILE` (downloaded from the
-   App Service overview page).
-6. Run `create_circle` against the production database with
-   `--base-url` set to the app's URL, and share the link.
+### Automatic deploys on push (optional)
+
+In the Cloudflare dashboard: **Workers & Pages > where-should-we-go-out >
+Settings > Builds > Connect** to this GitHub repo, with:
+
+- Build command: `npm run build`
+- Deploy command: `npm run deploy`
+
+Every push to `main` then deploys. If the deploy step fails on the D1
+migrations with a permissions error, give the build's API token D1 edit
+access (or change the deploy command to `npx wrangler deploy` and apply
+migrations from your computer with `npx wrangler d1 migrations apply DB --remote`).
+
+### Free tier limits
+
+Workers: 100,000 requests/day. D1: 5 million rows read and 100,000 rows
+written per day, 5 GB storage. A friend group uses a tiny fraction of this.

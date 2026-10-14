@@ -40,8 +40,11 @@ export function daysBetween(iso: string, laterIso: string): number {
 }
 
 export function names(ids: string[], members: Member[], removedLabel = 'someone'): string {
+  // In the group's own order, whatever order the ids came in.
+  const order = new Map(members.map((m, i) => [m.id, i]))
   const byId = new Map(members.map((m) => [m.id, m.name]))
-  const list = ids.map((id) => byId.get(id) ?? removedLabel)
+  const sorted = [...ids].sort((a, b) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity))
+  const list = sorted.map((id) => byId.get(id) ?? removedLabel)
   if (list.length <= 1) return list.join('')
   return `${list.slice(0, -1).join(', ')} & ${list[list.length - 1]}`
 }
